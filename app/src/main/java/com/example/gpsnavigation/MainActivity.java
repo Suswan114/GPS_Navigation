@@ -139,11 +139,11 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         mapView.onStart();
     }
 
-    @Override
-    protected void onResume() {
-        super.onResume();
-        mapView.onResume();
-    }
+//    @Override
+//    protected void onResume() {
+//        super.onResume();
+//        mapView.onResume();
+//    }
 
     @Override
     protected void onPause() {
