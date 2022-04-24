@@ -2,9 +2,11 @@ package com.example.gpsnavigation;
 
 import android.location.Location;
 import android.os.Bundle;
+import android.view.View;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.cardview.widget.CardView;
 
 import com.mapbox.android.core.location.LocationEngine;
 import com.mapbox.android.core.location.LocationEngineListener;
@@ -12,7 +14,10 @@ import com.mapbox.android.core.location.LocationEnginePriority;
 import com.mapbox.android.core.location.LocationEngineProvider;
 import com.mapbox.android.core.permissions.PermissionsListener;
 import com.mapbox.android.core.permissions.PermissionsManager;
+import com.mapbox.geojson.Point;
 import com.mapbox.mapboxsdk.Mapbox;
+import com.mapbox.mapboxsdk.annotations.Marker;
+import com.mapbox.mapboxsdk.annotations.MarkerOptions;
 import com.mapbox.mapboxsdk.camera.CameraUpdateFactory;
 import com.mapbox.mapboxsdk.geometry.LatLng;
 import com.mapbox.mapboxsdk.maps.MapView;
@@ -25,7 +30,7 @@ import com.mapbox.mapboxsdk.plugins.locationlayer.modes.RenderMode;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity implements OnMapReadyCallback,
-        LocationEngineListener, PermissionsListener {
+        LocationEngineListener, PermissionsListener, MapboxMap.OnMapClickListener {
 
     private MapView mapView;
     private MapboxMap map;
@@ -33,6 +38,9 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     private LocationEngine locationEngine;
     private LocationLayerPlugin locationLayerPlugin;
     private Location originLocation;
+    private CardView navigationButton;
+    private Point originPosition,destinationPosition;
+    private Marker destinationMarker;
 
     public MainActivity() {
     }
@@ -46,13 +54,23 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         mapView=findViewById(R.id.map_view);
         mapView.onCreate(savedInstanceState);
         mapView.getMapAsync(this);
+        navigationButton=findViewById(R.id.nav_button);
+        navigationButton.setVisibility(View.GONE);
+        navigationButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                //Launch Nav
+            }
+        });
 
     }
 
     @Override
     public void onMapReady(MapboxMap mapboxMap) {
         map=mapboxMap;
+        map.addOnMapClickListener(this);
         enableLocation();
+
     }
 
     private void enableLocation(){
@@ -94,6 +112,20 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 location.getLongitude()),13.0));
 
     }
+
+    @Override
+    public void onMapClick(@NonNull LatLng point) {
+
+        if(destinationMarker!=null){
+            map.removeMarker(destinationMarker);
+        }
+        destinationMarker=map.addMarker(new MarkerOptions().position(point));
+        destinationPosition=Point.fromLngLat(point.getLongitude(),point.getLatitude());
+        originPosition=Point.fromLngLat(originLocation.getLongitude(),originLocation.getLatitude());
+        navigationButton.setVisibility(View.VISIBLE);
+
+    }
+
     @Override
     @SuppressWarnings("MissingPermission")
     public void onConnected() {
