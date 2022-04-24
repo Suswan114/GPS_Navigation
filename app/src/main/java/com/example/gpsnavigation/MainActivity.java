@@ -1,7 +1,9 @@
 package com.example.gpsnavigation;
 
+import android.icu.text.RelativeDateTimeFormatter;
 import android.location.Location;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 
 import androidx.annotation.NonNull;
@@ -14,6 +16,8 @@ import com.mapbox.android.core.location.LocationEnginePriority;
 import com.mapbox.android.core.location.LocationEngineProvider;
 import com.mapbox.android.core.permissions.PermissionsListener;
 import com.mapbox.android.core.permissions.PermissionsManager;
+import com.mapbox.api.directions.v5.models.DirectionsResponse;
+import com.mapbox.api.directions.v5.models.DirectionsRoute;
 import com.mapbox.geojson.Point;
 import com.mapbox.mapboxsdk.Mapbox;
 import com.mapbox.mapboxsdk.annotations.Marker;
@@ -26,8 +30,17 @@ import com.mapbox.mapboxsdk.maps.OnMapReadyCallback;
 import com.mapbox.mapboxsdk.plugins.locationlayer.LocationLayerPlugin;
 import com.mapbox.mapboxsdk.plugins.locationlayer.modes.CameraMode;
 import com.mapbox.mapboxsdk.plugins.locationlayer.modes.RenderMode;
+import com.mapbox.services.android.navigation.ui.v5.NavigationLauncher;
+import com.mapbox.services.android.navigation.ui.v5.NavigationLauncherOptions;
+import com.mapbox.services.android.navigation.ui.v5.route.NavigationMapRoute;
+import com.mapbox.services.android.navigation.v5.navigation.NavigationRoute;
 
 import java.util.List;
+import java.util.NavigableMap;
+
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
 
 public class MainActivity extends AppCompatActivity implements OnMapReadyCallback,
         LocationEngineListener, PermissionsListener, MapboxMap.OnMapClickListener {
@@ -41,10 +54,11 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     private CardView navigationButton;
     private Point originPosition,destinationPosition;
     private Marker destinationMarker;
+    private NavigationMapRoute navigationMapRoute;
+    private static final String TAG="MAIN ACTIVITY";
 
-    public MainActivity() {
-    }
 
+    public MainActivity(){}
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -57,9 +71,16 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         navigationButton=findViewById(R.id.nav_button);
         navigationButton.setVisibility(View.GONE);
         navigationButton.setOnClickListener(new View.OnClickListener() {
+
             @Override
             public void onClick(View view) {
-                //Launch Nav
+                NavigationLauncherOptions options=NavigationLauncherOptions.builder()
+                        .origin(originPosition)
+                        .destination(destinationPosition)
+                        .shouldSimulateRoute(false)
+                        .build();
+
+                NavigationLauncher.startNavigation(MainActivity.this,options);
             }
         });
 
@@ -122,8 +143,43 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         destinationMarker=map.addMarker(new MarkerOptions().position(point));
         destinationPosition=Point.fromLngLat(point.getLongitude(),point.getLatitude());
         originPosition=Point.fromLngLat(originLocation.getLongitude(),originLocation.getLatitude());
+        getRoute(originPosition,destinationPosition);
         navigationButton.setVisibility(View.VISIBLE);
 
+    }
+
+    private void getRoute(Point origin, Point destination){
+        NavigationRoute.builder()
+                .accessToken(Mapbox.getAccessToken())
+                .origin(origin)
+                .destination(destination)
+                .build()
+                .getRoute(new Callback<DirectionsResponse>() {
+                    @Override
+                    public void onResponse(Call<DirectionsResponse> call,Response<DirectionsResponse> response){
+                        if (response.body()==null){
+                            Log.e(TAG,"No routes found!! Check right user and access token!!");
+                            return;
+                        }else if(response.body().routes().size()==0){
+                            Log.e(TAG,"No routes found!!");
+                            return;
+                        }
+
+                        DirectionsRoute currentRoute=response.body().routes().get(0);
+
+                        if(navigationMapRoute!=null){
+                            navigationMapRoute.removeRoute();
+                        }else{
+                            navigationMapRoute=new NavigationMapRoute(null,mapView,map);
+                        }
+                        navigationMapRoute.addRoute(currentRoute);
+                    }
+
+                    @Override
+                    public void onFailure(Call<DirectionsResponse> call, Throwable t) {
+                        Log.e(TAG,"ERROR:"+t.getMessage());
+                    }
+                });
     }
 
     @Override
@@ -153,7 +209,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     }
 
     @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
+                                           @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         permissionsManager.onRequestPermissionsResult(requestCode, permissions, grantResults);
     }
