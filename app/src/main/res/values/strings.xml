@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">GPS Navigation</string>
+    <string name="access_token">sk.eyJ1Ijoic3Vzd2FuYmlzd2FzIiwiYSI6ImNsMmJuZzd0ZzAxcm4zZHBienlsYjd4cWsifQ.gJfzvwaUmFo3BudKeOfShA</string>
+
+</resources>
